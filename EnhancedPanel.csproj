@@ -60,16 +60,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\favicon.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\monster.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\controlcenter_Monster.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\logo.png" />
+    <EmbeddedResource Include="Resources\logo.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

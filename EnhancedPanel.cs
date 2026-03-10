@@ -2,17 +2,20 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Windows.Forms;
 
 namespace MyCustomControls
 {
     [ToolboxItem(true)]
+    [ToolboxBitmap(typeof(EnhancedPanel), "Resources.logo.png")] // Özel ikonunuz
+    [DefaultEvent("DragDrop")] // Çift tıklandığında hangi event'e gideceğini belirler
     public class EnhancedPanel : Panel
     {
         // --- Yeni Değişkenler ---
         private Image _currentIcon = null; // O an gösterilecek ikon
         private int _iconSize = 48; // İkonun kare boyutu (px)
-
+        private string _fileSizeText = ""; // Dosya boyutunu tutacak
         // --- Özellikler (Properties) ---
         private DashStyle _borderStyle = DashStyle.Solid;
         private Color _borderColor = Color.Black;
@@ -76,7 +79,23 @@ namespace MyCustomControls
             _showClearButton = false;
             this.Invalidate();
         }
-
+        private string GetReadableFileSize(string filePath)
+        {
+            try
+            {
+                long bytes = new System.IO.FileInfo(filePath).Length;
+                string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
+                int counter = 0;
+                decimal number = (decimal)bytes;
+                while (Math.Round(number / 1024) >= 1)
+                {
+                    number /= 1024;
+                    counter++;
+                }
+                return string.Format("{0:n1} {1}", number, suffixes[counter]);
+            }
+            catch { return ""; }
+        }
         // Fare hareketlerini izleyerek butona tıklandığını anlayalım
         protected override void OnMouseMove(MouseEventArgs e)
         {
@@ -127,15 +146,17 @@ namespace MyCustomControls
             if (this.Controls.Count == 0 && !string.IsNullOrEmpty(_placeholderText))
             {
                 using (Brush brush = new SolidBrush(_placeholderColor))
+                using (Brush sizeBrush = new SolidBrush(Color.FromArgb(150, _placeholderColor))) // Boyut için daha soluk renk
                 {
                     StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
 
-                    int totalContentHeight = _iconSize + (int)_placeholderFont.Height + 10; // İkon + Boşluk + Metin
+                    int totalContentHeight = _iconSize + (int)_placeholderFont.Height + (_currentIcon != null ? 20 : 0); ; // İkon + Boşluk + Metin
                     int startY = (this.Height - totalContentHeight) / 2;
 
                     // İkon Varsa Çiz
                     if (_currentIcon != null)
                     {
+
                         Rectangle iconRect = new Rectangle((this.Width - _iconSize) / 2, startY, _iconSize, _iconSize);
                         g.DrawImage(_currentIcon, iconRect);
                         startY += _iconSize + 10; // Metni ikonun altına kaydır
@@ -144,6 +165,15 @@ namespace MyCustomControls
                     // Metni Çiz
                     RectangleF textRect = new RectangleF(10, startY, this.Width - 20, _placeholderFont.Height * 2);
                     g.DrawString(_placeholderText, _placeholderFont, brush, textRect, sf);
+                    // 3. Dosya Boyutu (Eğer varsa)
+                    if (!string.IsNullOrEmpty(_fileSizeText))
+                    {
+                        startY += (int)_placeholderFont.Height + 15;
+                        using (Font sizeFont = new Font(_placeholderFont.FontFamily, _placeholderFont.Size * 0.8f, FontStyle.Regular))
+                        {
+                            g.DrawString(_fileSizeText, sizeFont, sizeBrush, new RectangleF(10, startY, this.Width - 20, 20), sf);
+                        }
+                    }
                 }
             }
 
@@ -165,7 +195,7 @@ namespace MyCustomControls
                 DrawClearButton(g);
             }
         }
-        private void DrawClearButton(Graphics g)
+        private void DrawClearButtonv1(Graphics g)
         {
             int size = 24;
             int margin = 10;
@@ -179,6 +209,19 @@ namespace MyCustomControls
                 g.DrawLine(pen, _clearButtonRect.X + 6, _clearButtonRect.Y + 6, _clearButtonRect.Right - 6, _clearButtonRect.Bottom - 6);
                 g.DrawLine(pen, _clearButtonRect.Right - 6, _clearButtonRect.Y + 6, _clearButtonRect.X + 6, _clearButtonRect.Bottom - 6);
                 //g.DrawImage(global::EnhancedPanel.Properties.Resources.logo, _clearButtonRect);
+            }
+        }
+
+        private void DrawClearButton(Graphics g)
+        {
+            _clearButtonRect = new Rectangle(this.Width - 35, 10, 25, 25);
+
+            // Çöp kutusu karakteri (Unicode: \uE74D)
+            using (Font iconFont = new Font("Segoe MDL2 Assets", 12))
+            {
+                TextRenderer.DrawText(g, "\uE74D", iconFont, _clearButtonRect,
+                    _isMouseOverClear ? Color.Red : Color.Gray,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             }
         }
         // Yuvarlatılmış dikdörtgen path'i oluşturan yardımcı metod
@@ -249,7 +292,7 @@ namespace MyCustomControls
             {
                 string filePath = files[0];
                 _placeholderText = System.IO.Path.GetFileName(filePath);
-
+                _fileSizeText = GetReadableFileSize(filePath); // Boyutu al
                 // Uzantıya göre ikon ata
                 _currentIcon = GetSystemIcon(filePath);
                 _showClearButton = true; // Butonu göster
