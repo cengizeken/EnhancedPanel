@@ -77,6 +77,7 @@ namespace MyCustomControls
             _currentIcon = null;
             _placeholderText = _originalPlaceholder;
             _showClearButton = false;
+            _fileSizeText = "";
             this.Invalidate();
         }
         private string GetReadableFileSize(string filePath)
